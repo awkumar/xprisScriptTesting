@@ -1,0 +1,81 @@
+#!/bin/ksh 
+# Satt upp enviroment
+#VERSION=0
+#. ~xprist/.profile 1> /dev/null 2> /dev/null
+# Comma delimeted list of mail recipients.
+mail_subs="fredrik.petersson@tieto.com"
+# Disabling 11 and 12 for a while
+#env="11 12 13"
+env="1 2 3"
+#How many procs are there supoosed to be in resp environment.
+proc11=65
+proc12=65
+proc1=65
+proc2=65
+proc3=64
+proc13=64
+DUMMY=~xprist/.dummy$$
+
+off_hours()
+{
+    RUNTIME=`date +'%H%M'`
+    # Since Xpris is down between 2230 - 0615 this script should not try to run then. - frepe
+    if  [ $RUNTIME -gt 2222 ]; then  # Give it a couple of min gracetime before it stops
+        exit 0
+    elif [ $RUNTIME -lt 0630 ]; then # Give it a couple of  min to start
+	exit 0
+    fi
+}
+
+set_env()
+{
+    #VERSION=$1;export VERSION
+    version=$1;export version
+    # Gaa till raett appdir, setenv koers oxo
+    . ~xprist/bin/appdir 1>/dev/null 2>/dev/null
+    PATH=.:$TUXDIR/bin:$PATH; export PATH
+    #echo $PWD
+}
+
+check_procs()
+{
+#    echo bbs |tmadmin 2>&-
+    #echo psr | tmadmin 2>&- | grep '(' | wc -l
+    echo bbs |tmadmin 2>&- |grep servers | awk '{ print $5 }'
+    #procs=`echo psr | tmadmin 2>&- | grep '(' `
+    #export $procs
+}
+
+mail_users()
+{
+    mailx -s "[TUXEDO PROBLEM] in Test$1" $mail_subs < $DUMMY >/dev/null 2>&1
+    rm $DUMMY
+}
+
+
+#Main#
+if [ ! "$#" = "0" ]; then
+    set_env ${1}
+    check_procs
+    exit 0
+fi
+off_hours
+for var in $env ; do
+    eval Expected_procs=\"\$proc$var\"
+    #echo "Kollar antalprocesser for Test${var}"
+    set_env ${var}
+    Current_procs=`check_procs`
+    if [ -z $Current_procs ]; then
+        Current_procs=0
+    fi
+    if [ $Current_procs -ne $Expected_procs ]; then
+       echo Problem in test${var} > $DUMMY
+       echo Expected processes : $Expected_procs >> $DUMMY
+       echo Current processes  : $Current_procs >> $DUMMY
+       mail_users ${var}
+    fi
+    #check_procs
+    echo "$Expected_procs"
+done
+### eval foo=\"\$arg$num\"
+

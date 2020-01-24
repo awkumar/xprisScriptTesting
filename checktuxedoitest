@@ -1,0 +1,83 @@
+#!/bin/ksh -x
+# Satt upp enviroment
+VERSION=0
+. ~xprisi/.profile 1> /dev/null 2> /dev/null
+# Comma delimeted list of mail recipients.
+export mail_subs="fredrik.petersson@tieto.com"
+env="04"
+#How many procs are there supoosed to be in resp environment.
+proc11=61
+proc12=71
+proc13=68
+#proc04=71
+proc04=66
+DUMMY=~xprisi/.dummy$$
+ORG_PSC=~xprisi/.itest_tuxedo_servers
+TMP_PSC=~xprisi/.tmp_itest_tuxedo_servers
+
+
+off_hours()
+{
+    RUNTIME=`date +'%H%M'`
+    # Since Xpris is down between 2230 - 0615 this script should not try to run then. - frepe
+    if  [ $RUNTIME -gt 2222 ]; then  # Give it 1 couple of min gracetime before it stops
+        exit 0
+    elif [ $RUNTIME -lt 0628 ]; then # Give it a couple of  min to start
+	exit 0
+    elif [ $RUNTIME -eq 1213 ]; then # Noon restart....
+	exit 0
+    fi
+}
+
+set_env()
+{
+    VERSION=$1;export VERSION
+    # Gaa till raett appdir, setenv koers oxo
+    . ~xprisi/bin/appdir 1>/dev/null 2>/dev/null
+    PATH=.:$TUXDIR/bin:$PATH; export PATH
+    #echo $PWD
+}
+
+check_procs()
+{
+#    echo bbs |tmadmin 2>&-
+    rm -f $TMP_PSC
+    echo psr | tmadmin 2>&-  > $TMP_PSC
+    echo bbs |tmadmin 2>&- |grep servers | awk '{ print $5 }'
+    #echo psr | tmadmin 2>&- | grep '(' | wc -l
+    #procs=`echo psr | tmadmin 2>&- | grep '(' `
+    #export $procs
+}
+
+mail_users()
+{
+    mailx -s "[TUXEDO PROBLEM] in ITEST" $mail_subs < $DUMMY >/dev/null 2>&1
+    rm $DUMMY
+}
+
+
+#Main#
+if [ ! "$#" = "0" ]; then
+    ##set_env ${1}
+    set_env ${env}
+    check_procs
+    exit 0
+fi
+off_hours
+for var in $env ; do
+    eval Expected_procs=\"\$proc$var\"
+    #echo "Kollar antalprocesser for Test${var}"
+    set_env ${var}
+    Current_procs=`check_procs`
+    if [ $Current_procs -ne $Expected_procs ]; then
+       echo Problem in $var > $DUMMY
+       echo Expected processes : $Expected_procs >> $DUMMY
+       echo Current processes  : $Current_procs >> $DUMMY
+       diff $ORG_PSC $TMP_PSC >> $DUMMY
+       mail_users ${var}
+    fi
+    #check_procs
+    #echo "$Expected_procs"
+done
+### eval foo=\"\$arg$num\"
+

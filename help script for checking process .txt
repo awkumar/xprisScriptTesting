@@ -1,0 +1,57 @@
+#!/bin/bash
+if [ -z "$(pgrep -f jboss)" ]
+  then
+  echo "jboss is not running"
+else
+  echo "jboss is running"
+fi 
+
+***************
+Instead of checking the output, just use the command:
+
+if pgrep -f jboss >/dev/null
+  then
+  echo "jboss is running"
+else
+  echo "jboss is not running"
+fi 
+*****************
+#!/bin/bash
+
+pgrep -f jboss &> /dev/null
+if [ $? -eq 0 ]
+  then
+  echo "jboss is running"
+else
+  echo "jboss is not running"
+fi
+****************
+
+down vote
+#! /bin/bash
+ if [ -z "$(ps -ef | grep org.jboss.Main)" ]
+then 
+ echo "jboss is not running"
+else
+  echo "jboss is running"
+fi
+
+***************
+if [ -z "$(ps -ef | grep java | grep jboss)" ]
+then 
+ echo "JBoss is NOT running"
+else
+  echo "JBoss is running"
+fi
+*************
+Get the process ID JBoss 7 / EAP 6:
+
+pgrep -f org.jboss.as
+So if you want to enhance the former example script with this:
+
+if [ -z "$(pgrep -f org.jboss.as)" ]
+then 
+ echo "JBoss is NOT running"
+else
+  echo "JBoss is running"
+fi 
